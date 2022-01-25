@@ -43,30 +43,50 @@ class TestController
 	</html>';
 	
 
-	//Sposob 1
-	echo ("Sposob 1</ BR>");
-	$doc = new DOMDocument();
-	$doc->loadHTML("$html");
-	$odnosniki = $doc->getElementsByTagName("a");
-	foreach ($odnosniki as $odnosnik){
-		$result[] = $odnosnik->getAttribute("href");
-	}
-	Helper::print_r2($result);
-
-
-
-	//Sposob 2
-	echo ("Sposob 2</ BR>");
-	$xpath = new DOMXPath($doc);
-	$hrefs = $xpath->query("//a/@href");
-	foreach ($hrefs as $node){ //$node: DOMAttr
-		$result2[] = $node->nodeValue;
+		$links = new LinksAgregator();
+		$linksAssoc = $links->getLinks($html);
 		
-	}
-		Helper::print_r2($result2);
-		return new Response("");
+		$linksJoined = Array();
+		foreach ($linksAssoc as $key => $value){
+			$linksJoined[] = "$key - $value";
+		}
+
+		$show = implode("<BR>", $linksJoined);
+
+
+		return new Response("$show");
 	}
 
+}
+
+class LinksAgregator{
+    private $links = array();
+
+    public function getLinks(String $html): array{
+        $doc = new DOMDocument();
+        $doc->loadHTML("$html");
+        $DOMNodeList = $doc->getElementsByTagName("a");
+		
+        foreach ($DOMNodeList as $link) {
+            $eachLink = $link->getAttribute("href");
+            $eachAnchor = $link->textContent;
+            $this->links[$eachLink] = $eachAnchor;
+        }
+
+        return $this->links;
+    }
+
+	//Alternative method
+	public function getLinks2(String $html){
+		
+		$doc = new DOMDocument();
+		$doc->loadHTML("$html");
+		$xpath = new DOMXPath($doc);
+		$hrefs = $xpath->query("//a/@href");
+		foreach ($hrefs as $node){ //$node: DOMAttr
+			$result2[] = $node->nodeValue;
+		}
+	}
 }
 
 abstract class Helper {
