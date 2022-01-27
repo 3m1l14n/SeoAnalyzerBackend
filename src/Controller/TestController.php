@@ -5,6 +5,7 @@ namespace App\Controller;
 use DOMDocument;
 use DOMXPath;
 use Symfony\Bundle\FrameworkBundle\Test\TestContainer;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -14,45 +15,18 @@ class TestController
 	/**
 	 * @Route("/analyze")
 	 */
-	public function homepage()
+	public function homepage(Request $request)
 	{
-
-	$html = '<!DOCTYPE html>
-	<html lang="en">
-	<meta charset="UTF-8">
-	<title>Page Title</title>
-	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<link rel="stylesheet" href="">
-	<style>
-	</style>
-	<script src=""></script>
-	<body>
-
-	<img src="img_la.jpg" alt="LA" style="width:100%">
-
-	<div class="">
-	 <h1>This is a Heading</h1>
-	 <p>This is a paragraph.</p>
-	 <p>This is another paragraph.</p>
-	  <a href="http://mojastrona1.com">Mój anchor text 1</a>
-	  <a href="http://mojastrona2.com">Mój anchor text 2</a>
-	  <a href="http://mojastrona3.com">Mój anchor text 3</a>
-	  <a href="http://mojastrona4.com">Mój anchor text 4</a>
-	</div>
-	</body>
-	</html>';
-	
+		$url = $request->query->get('url');
 
 		$links = new LinksAgregator();
-		$linksAssoc = $links->getLinks($html);
-		
+		$linksAssoc = $links->getLinks($url);
 		$linksJoined = Array();
 		foreach ($linksAssoc as $key => $value){
-			$linksJoined[] = "$key - $value";
+			$linksJoined[] = "$key - <b>$value</b>";
 		}
 
 		$show = implode("<BR>", $linksJoined);
-
 
 		return new Response("$show");
 	}
@@ -61,14 +35,50 @@ class TestController
 
 class LinksAgregator{
     private $links = array();
+	private $url = "";
 
-    public function getLinks(String $html): array{
-        $doc = new DOMDocument();
-        $doc->loadHTML("$html");
-        $DOMNodeList = $doc->getElementsByTagName("a");
+	private function getRemoteFileContent(): string{
+		
+		$curl = curl_init();
+		$header[0] = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
+		$header[] = "Cache-Control: max-age=0";
+		$header[] = "Connection: keep-alive";
+		$header[] = "Keep-Alive: 300";
+		$header[] = "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7";
+		$header[] = "Accept-Language: en-us,en;q=0.5";
+		$header[] = "Pragma: "; // browsers keep this blank.
+
+		curl_setopt($curl, CURLOPT_URL, $this->url);
+		curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0');
+		curl_setopt($curl, CURLOPT_HTTPHEADER, $header);
+		curl_setopt($curl, CURLOPT_ENCODING, 'gzip,deflate');
+		curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+
+		$html = curl_exec($curl); 
+		curl_close($curl);
+
+		return $html;
+	}
+
+    public function getLinks(String $url): array{
+		$this->url = $url;
+
+        $dom = new DOMDocument();
+		//$dom->strictErrorChecking = false; //Ta linia nie dziala. Musialem uzyc linie nizej wyciszania bledow znakiem @
+        @$dom->loadHTML($this->getRemoteFileContent()); //Without @ ErrorException: DOMDocument::loadHTML(): Tag header invalid in Entity
+        $DOMNodeList = $dom->getElementsByTagName("a");
 		
         foreach ($DOMNodeList as $link) {
-            $eachLink = $link->getAttribute("href");
+			$theLink = $this->url.$link->getAttribute("href");
+
+			if (strpos("http", $theLink)){
+				$eachLink = $this->url.$theLink;
+			}
+			else {
+                $eachLink = $theLink;
+            }
+			
             $eachAnchor = $link->textContent;
             $this->links[$eachLink] = $eachAnchor;
         }
@@ -76,17 +86,6 @@ class LinksAgregator{
         return $this->links;
     }
 
-	//Alternative method
-	public function getLinks2(String $html){
-		
-		$doc = new DOMDocument();
-		$doc->loadHTML("$html");
-		$xpath = new DOMXPath($doc);
-		$hrefs = $xpath->query("//a/@href");
-		foreach ($hrefs as $node){ //$node: DOMAttr
-			$result2[] = $node->nodeValue;
-		}
-	}
 }
 
 abstract class Helper {
