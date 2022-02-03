@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Controller;
 
 use DOMDocument;
@@ -17,12 +16,13 @@ class TestController
 	 */
 	public function RequestUrl(Request $request)
 	{
-		$webpage = new WebPage($request->query->get('pageaddress'));
-		$webpage->crawler->run();
+		$url = $request->query->get('pageaddress');
+		$webpage = new WebPage($url);
+		$webpage->crawler->run($url);
 
 		//Helper::print_r2($webpage);
 		// Helper::print_r2($webpage->pageObjects);
-		Helper::print_r2($webpage->crawler->run());
+		//Helper::print_r2($webpage->crawler->run());
 		//Helper::print_r2($webpage->pageObjects[0]->linkObjects);
 		//$webpage->getPage('contact')->getLinkCount(); //Returns number of links of specific page. 
 
@@ -48,10 +48,15 @@ class CrawlerService
 		$this->dom = $dom;
 	}
     
-    public function run($url = "WebPageInit", $depth = 5)
+    public function run($url, $depth = 1, $seen = NULL)
 	{
-		$url = "WebPageInit" ? $url = $this->url : $url = $url;
+		//$url === "WebPageInit" ? $url = $this->url : $url = $url;
+		// if ($url === $this->url)
+		// {
+		// 	$url = $this->url;
+		// }
 
+		//Helper::print_r2($url." url");
 		$seen = array();
 
 		if (isset($seen[$url]) || $depth === 0)
@@ -59,26 +64,37 @@ class CrawlerService
 			return;
 		}
 
+		$seen[$url] = true;
+		//Helper::print_r2($seen);
 		$anchor = $this->dom->getElementsByTagName("a");
-		foreach ($anchor as $link)
-		{
-			$theLink = $link->getAttribute("href");
-
-			//If the link is relative
-			if (!strpos($theLink, "ttp"))
-			{
-				$href = $this->url.$theLink;
-			}
-			else 
-			{
-                $href = $theLink;
+        foreach ($anchor as $link) {
+            $theLink = $link->getAttribute("href");
+			$theLink === "/" ? $theLink = "" : $theLink = $theLink; //Kasowanie znaku "/" bo warunek if (!$key == $this->url) nie dzialal prawidlowo 
+			//Helper::print_r2($theLink);
+            //If the link is relative
+			$linkText = $link->nodeValue ? $anchorText = $link->nodeValue : "NULL";
+            if (!strpos($theLink, "ttp")) {
+                $href[$this->url.$theLink] = $linkText;
+            } else {
+                $href[$theLink] = $linkText;;
             }
-			//IF the link contains body. @NULL = "NULL"
-			$anchorText = $link->nodeValue ? $anchorText = $link->nodeValue : "NULL";
+			
+        }
+		$uniqueHrefs = array_unique($href);
+		foreach ($uniqueHrefs as $key => $value){
 
-            $linkObjects[$href] = new Link($href, $anchorText);
+			var_dump($key);
+			echo "<br>";
+			var_dump($this->url);
+            $linkObjects[$key] = new Link($key, "$value");
+			Helper::print_r2($key);
+			Helper::print_r2($linkObjects);
 
-			$this->run($href, $depth = -1);
+            if ($key !== $this->url) {
+                echo "test";
+                $this->run($key, $depth = -1, $seen);
+            }
+
         }
 		//Return array of linkObjects
 		return $linkObjects;
