@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller;
+namespace App\Models;
 
 class Page extends WebPage
 {

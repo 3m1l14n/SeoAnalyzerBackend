@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use DOMDocument;
+use App\Models\Link;
 
 class CrawlerService
 {

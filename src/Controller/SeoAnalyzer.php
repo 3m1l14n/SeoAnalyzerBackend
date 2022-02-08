@@ -1,15 +1,14 @@
 <?php
+
 namespace App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Test\TestContainer;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Helper;
-use App\Controller;
-use App\Services\CrawlerService;
+use App\Models\WebPage;
 
-class TestController
+class SeoAnalyzer
 {
 
 	/**

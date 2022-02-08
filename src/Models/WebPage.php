@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Controller;
+namespace App\Models;
+
+use App\Services\CrawlerService;
 
 class WebPage
 {
